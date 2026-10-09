@@ -1,0 +1,45 @@
+name: Päivitä tilannekuva
+
+on:
+  schedule:
+    - cron: "15 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: tilannekuva
+  cancel-in-progress: false
+
+jobs:
+  paivita:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Hae koodi
+        uses: actions/checkout@v4
+
+      - name: Hae uutiset ja rakenna sivu
+        run: python3 build.py
+
+      - name: Tallenna data repoon
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          git commit -m "Päivitä data" || echo "Ei muutoksia"
+          git push
+
+      - name: Paketoi sivu
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+      - name: Julkaise sivu
+        id: deployment
+        uses: actions/deploy-pages@v4
